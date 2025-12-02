@@ -15,11 +15,13 @@ import {
 // CONFIGURATION & CONSTANTS
 // ==========================================
 
-// ⚠️ IMPORTANT: API Key is injected by the environment.
-// ⚠️ IMPORTANT: API Key is injected by the environment.
-const apiKey = process.env.REACT_APP_GEMINI_API_KEY; 
-const convertioApiKey = process.env.REACT_APP_CONVERTIO_API_KEY;
+// ⚠️ FIXED: Simplified API Key declaration to ensure compatibility.
+// If running locally in Vite, you can uncomment the line below:
+// const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+const apiKey = ""; 
 
+// We can keep this one hardcoded for the demo to work immediately
+const convertioApiKey = "f6e75d9613d46bdcf890c760b7c22b7b";
 
 const APP_VERSION = "v3.1.0-EXPANDED";
 
@@ -937,54 +939,361 @@ export default function App() {
     setErrorMessage('');
   };
 
-  const getPreviewHtml = () => {
-    const cdnLinks = `
-      <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
-      <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
-      <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-          font-family: 'Open Sans', sans-serif !important; 
-          background: #e2e8f0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
-          min-height: 100vh;
-          padding: 40px 0;
-          overflow-x: hidden;
-        }
-        h1, h2, h3, h4 { font-family: 'Roboto', sans-serif !important; font-weight: 700; }
-        .slide-container { width: 100%; display: flex; justify-content: center; margin-bottom: 20px; }
-        .slide {
-          width: 1280px;
-          height: 720px;
-          background: white;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-          position: relative;
-          overflow: hidden;
-          border: 1px solid #cbd5e1;
-        }
-      </style>
-    `;
+  // --- VIEWS ---
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlCode, 'text/html');
-    const slides = doc.querySelectorAll('.slide');
-    
-    let bodyContent = '';
-    slides.forEach(slide => {
-      bodyContent += `<div class="slide-container">${slide.outerHTML}</div>`;
-    });
+  const LandingView = () => (
+    <div className="min-h-screen bg-[#e3e3e3] text-black font-mono relative overflow-hidden flex flex-col justify-center items-center">
+      <div className="absolute inset-0 pointer-events-none" 
+           style={{ backgroundImage: 'radial-gradient(#a1a1a1 1px, transparent 1px)', backgroundSize: '20px 20px', opacity: 0.3 }}>
+      </div>
 
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>${cdnLinks}</head>
-        <body>${bodyContent}</body>
-      </html>
-    `;
+      <nav className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-50">
+         <div className="flex items-center gap-2">
+            <Zap className="text-orange-600" />
+            <span className="font-bold text-lg">BeBlink</span>
+         </div>
+         <div className="flex gap-4">
+            {user ? (
+               <div className="flex items-center gap-2 cursor-pointer hover:bg-black/5 p-2 rounded-[12px]" onClick={() => setShowAuthModal(true)}>
+                  <div className="w-8 h-8 bg-blue-600 rounded-full text-white flex items-center justify-center font-bold">
+                     {user.name[0]}
+                  </div>
+               </div>
+            ) : (
+               <button onClick={() => setShowAuthModal(true)} className="text-sm font-bold hover:underline">Sign In</button>
+            )}
+         </div>
+      </nav>
+
+      <main className="relative z-10 w-full max-w-4xl px-6 flex flex-col items-center">
+        <div className="bg-white border-2 border-black p-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-[24px] w-full text-center">
+            
+            <div className="inline-block bg-orange-100 text-orange-700 px-4 py-1 rounded-full text-xs font-bold mb-6">
+               {APP_VERSION}
+            </div>
+
+            <h1 className="text-5xl md:text-6xl font-black tracking-tighter mb-6 leading-tight">
+              AI-POWERED <br/> <span className="text-orange-600">SLIDE DECK</span> CREATOR
+            </h1>
+            
+            <p className="text-gray-500 mb-10 max-w-lg mx-auto text-lg">
+              Generate beautiful, structured HTML presentations in seconds. Export to PDF & PPTX seamlessly.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 w-full max-w-2xl mx-auto">
+               <button onClick={() => setView('input')} className="group flex flex-col items-center p-6 border-2 border-black rounded-[17px] hover:bg-black hover:text-white transition-all">
+                  <Plus size={32} className="mb-2"/>
+                  <span className="font-bold">New Project</span>
+                  <span className="text-xs opacity-60">Start from scratch</span>
+               </button>
+               <button className="group flex flex-col items-center p-6 border-2 border-dashed border-gray-300 rounded-[17px] hover:border-black hover:bg-gray-50 transition-all">
+                  <Layout size={32} className="mb-2 text-gray-400 group-hover:text-black"/>
+                  <span className="font-bold text-gray-400 group-hover:text-black">Open Template</span>
+                  <span className="text-xs opacity-60 text-gray-400 group-hover:text-black">Browse gallery</span>
+               </button>
+            </div>
+        </div>
+      </main>
+    </div>
+  );
+
+  const InputView = () => (
+    <div className="min-h-screen bg-[#f0f0f0] text-black font-mono flex flex-col">
+      <div className="bg-white border-b-2 border-black p-4 flex items-center justify-between sticky top-0 z-20">
+        <button onClick={reset} className="flex items-center gap-2 hover:text-orange-600 font-bold text-sm">
+          <ChevronLeft size={16} /> ABORT
+        </button>
+        
+        <div className="flex gap-2">
+           <button 
+             onClick={() => setActiveTab('basic')}
+             className={`px-4 py-1 rounded-[17px] text-xs font-bold transition-all ${activeTab === 'basic' ? 'bg-black text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+           >
+             Basic
+           </button>
+           <button 
+             onClick={() => setActiveTab('studio')}
+             className={`px-4 py-1 rounded-[17px] text-xs font-bold transition-all ${activeTab === 'studio' ? 'bg-black text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+           >
+             Studio
+           </button>
+        </div>
+
+        <div className="w-12"></div>
+      </div>
+
+      <div className="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Left Column */}
+        <div className="lg:col-span-7 flex flex-col gap-6">
+          <div className="bg-white p-6 rounded-[24px] border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+            <label className="text-xs font-bold uppercase flex items-center gap-2 text-gray-500 mb-4">
+               <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+               Input Stream / Topic
+            </label>
+            <textarea
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="> Enter presentation topic, context, or detailed prompt..."
+              className="w-full h-[250px] bg-gray-50 border-2 border-gray-200 p-6 font-mono text-sm resize-none focus:outline-none focus:bg-white focus:border-black transition-all placeholder:text-gray-400 rounded-[17px]"
+            />
+            <div className="flex justify-between mt-2 text-[10px] text-gray-400 font-bold">
+               <span>MIN 10 CHARS</span>
+               <span>{topic.length} CHARS</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             {CATEGORIES.map(cat => (
+               <button
+                 key={cat.id}
+                 onClick={() => setCategory(cat.id)}
+                 className={`p-4 rounded-[17px] border-2 text-left transition-all hover:translate-y-[-2px] ${category === cat.id ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200' : 'border-gray-200 bg-white hover:border-black'}`}
+               >
+                 <div className="text-2xl mb-1">{cat.icon}</div>
+                 <div className="font-bold text-sm">{cat.label}</div>
+                 <div className="text-[10px] text-gray-500">{cat.desc}</div>
+               </button>
+             ))}
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          
+          {activeTab === 'basic' ? (
+            <>
+              <div className="bg-white border-2 border-black p-5 rounded-[24px] shadow-sm">
+                <h3 className="text-xs font-bold uppercase border-b border-black/10 pb-2 mb-3 flex items-center gap-2">
+                  <Layout size={14}/> Visual Theme
+                </h3>
+                <div className="space-y-2">
+                  {THEMES.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTheme(t.id)}
+                      className={`w-full flex items-center justify-between px-4 py-3 border-2 transition-all text-xs font-bold rounded-[17px]
+                        ${theme === t.id ? 'border-black bg-black text-white' : 'border-gray-200 text-gray-500 hover:border-black hover:text-black'}`}
+                    >
+                      <span className="flex flex-col text-left">
+                        <span>{t.name}</span>
+                        <span className={`text-[9px] font-normal ${theme === t.id ? 'text-gray-400' : 'text-gray-400'}`}>{t.desc}</span>
+                      </span>
+                      {theme === t.id && <Check size={14} />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white border-2 border-black p-5 rounded-[24px] shadow-sm">
+                <h3 className="text-xs font-bold uppercase border-b border-black/10 pb-2 mb-3 flex items-center gap-2">
+                  <Palette size={14}/> Color Palette
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {PALETTES.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => setPalette(p.id)}
+                      className={`h-12 border-2 flex items-center justify-center gap-2 transition-all rounded-[17px]
+                        ${palette === p.id ? 'border-black shadow-md bg-gray-50' : 'border-gray-200 opacity-70 hover:opacity-100 hover:border-gray-400'}`}
+                    >
+                       <div className="flex -space-x-1">
+                          <div className={`w-4 h-4 rounded-full border border-white ${p.colors[0]}`}></div>
+                          <div className={`w-4 h-4 rounded-full border border-white ${p.colors[1]}`}></div>
+                       </div>
+                       <span className="text-[10px] font-bold uppercase">{p.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="bg-white border-2 border-black p-6 rounded-[24px] shadow-sm flex-1">
+               <h3 className="text-xs font-bold uppercase mb-6">Studio Fine-Tuning</h3>
+               <div className="space-y-6">
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 mb-2 block">Font Pairing</label>
+                    <select className="w-full p-2 border-2 border-gray-200 rounded-[12px] text-sm font-bold">
+                       <option>Modern (Inter / Roboto)</option>
+                       <option>Classic (Merriweather / Open Sans)</option>
+                       <option>Tech (Mono / Sans)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 mb-2 block">Slide Density</label>
+                    <div className="flex gap-2 bg-gray-100 p-1 rounded-[12px]">
+                       {['Low', 'Medium', 'High'].map(d => (
+                         <button key={d} className="flex-1 py-1 text-xs font-bold rounded-[8px] bg-white shadow-sm hover:bg-gray-50">{d}</button>
+                       ))}
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-[17px] text-xs text-blue-800 leading-relaxed border border-blue-100">
+                     <Monitor size={16} className="mb-2"/>
+                     Advanced studio settings adjust the AI prompt engineering to fine-tune the output structure.
+                  </div>
+               </div>
+            </div>
+          )}
+
+          <button 
+            onClick={startSequence}
+            disabled={!topic || !category}
+            className={`
+              h-20 border-2 border-black flex items-center justify-center gap-3 font-bold text-xl uppercase tracking-widest transition-all rounded-[24px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+              ${(!topic || !category)
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 shadow-none'
+                : 'bg-orange-500 text-white hover:bg-orange-600 hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]'}`}
+          >
+            <Zap size={24} className={(!topic || !category) ? "" : "fill-white"} />
+            GENERATE
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const LoadingView = () => (
+    <div className="min-h-screen bg-black text-white font-mono flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-md border border-gray-800 p-8 relative overflow-hidden rounded-[24px] bg-gray-900">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent animate-[shimmer_2s_infinite]"></div>
+        
+        <div className="flex justify-between items-end mb-8">
+           <h2 className="text-2xl font-bold tracking-tight">BUILDING DECK</h2>
+           <Activity className="w-6 h-6 text-orange-500 animate-pulse" />
+        </div>
+        
+        <div className="space-y-4 mb-10 text-xs font-mono text-gray-500">
+          <div className="flex justify-between items-center">
+            <span className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${loadingStep > 10 ? 'bg-green-500' : 'bg-gray-700'}`}></div> ANALYZING CONTEXT</span>
+            <span className={loadingStep > 10 ? "text-green-500" : ""}>{loadingStep > 10 ? "DONE" : "..."}</span>
+          </div>
+          <div className="flex justify-between items-center">
+             <span className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${loadingStep > 40 ? 'bg-green-500' : 'bg-gray-700'}`}></div> STRUCTURING SLIDES</span>
+             <span className={loadingStep > 40 ? "text-green-500" : ""}>{loadingStep > 40 ? "DONE" : "..."}</span>
+          </div>
+          <div className="flex justify-between items-center">
+             <span className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${loadingStep > 70 ? 'bg-orange-500 animate-pulse' : 'bg-gray-700'}`}></div> RENDERING HTML (16:9)</span>
+             <span className={loadingStep > 70 ? "text-green-500" : "text-orange-500"}>{loadingStep > 70 ? "DONE" : "WORKING..."}</span>
+          </div>
+        </div>
+
+        <div className="w-full h-3 bg-gray-800 mb-2 overflow-hidden rounded-full">
+           <div 
+             className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-300"
+             style={{ width: `${Math.min(loadingStep, 100)}%` }}
+           ></div>
+        </div>
+        <div className="text-right text-[10px] font-bold text-orange-500 tracking-widest">{Math.floor(loadingStep)}% COMPLETE</div>
+      </div>
+    </div>
+  );
+
+  const OutputView = () => {
+    const iframeRef = useRef(null);
+
+    const getPreviewHtml = () => {
+      const cdnLinks = `
+        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Open Sans', sans-serif !important; 
+            background: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 40px 0;
+            overflow-x: hidden;
+          }
+          h1, h2, h3, h4 { font-family: 'Roboto', sans-serif !important; font-weight: 700; }
+          .slide-container { width: 100%; display: flex; justify-content: center; margin-bottom: 20px; }
+          .slide {
+            width: 1280px;
+            height: 720px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+          }
+        </style>
+      `;
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlCode, 'text/html');
+      const slides = doc.querySelectorAll('.slide');
+      
+      let bodyContent = '';
+      slides.forEach(slide => {
+        bodyContent += `<div class="slide-container">${slide.outerHTML}</div>`;
+      });
+
+      return `
+        <!DOCTYPE html>
+        <html>
+          <head>${cdnLinks}</head>
+          <body>${bodyContent}</body>
+        </html>
+      `;
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col">
+        <div className="bg-black border-b border-gray-700 p-4 flex items-center justify-between sticky top-0 z-20">
+          <button onClick={reset} className="flex items-center gap-2 text-white hover:text-orange-500 font-bold text-sm">
+            <Home size={16} /> HOME
+          </button>
+
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setIsPresenting(true)}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-[12px] text-xs font-bold flex items-center gap-2"
+            >
+              <PlayCircle size={14} /> PRESENT
+            </button>
+            <button 
+              onClick={downloadPDF}
+              disabled={isExporting}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[12px] text-xs font-bold flex items-center gap-2"
+            >
+              <Download size={14} /> PDF
+            </button>
+            <button 
+              onClick={downloadPPTX}
+              disabled={isExporting}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-[12px] text-xs font-bold flex items-center gap-2"
+            >
+              <Download size={14} /> PPTX
+            </button>
+          </div>
+        </div>
+
+        {isExporting && (
+          <div className="bg-yellow-500 text-black p-3 text-center text-sm font-bold">
+            {conversionStatus || "Processing..."}
+          </div>
+        )}
+
+        <div ref={previewContainerRef} className="flex-1 p-6 overflow-auto bg-gray-800">
+          <iframe
+            ref={iframeRef}
+            srcDoc={getPreviewHtml()}
+            className="w-full h-full border-none rounded-lg shadow-2xl"
+            style={{ minHeight: '80vh' }}
+            title="Presentation Preview"
+            sandbox="allow-same-origin"
+          />
+        </div>
+
+        {isPresenting && (
+          <PresentationOverlay htmlCode={htmlCode} onClose={() => setIsPresenting(false)} />
+        )}
+      </div>
+    );
   };
 
   // --- RENDER ROUTER ---
@@ -1013,54 +1322,11 @@ export default function App() {
         </Modal>
       )}
 
-      {view === 'landing' && (
-        <LandingView 
-          setView={setView} 
-          user={user} 
-          setShowAuthModal={setShowAuthModal}
-        />
-      )}
-      
-      {view === 'input' && (
-        <InputView 
-          reset={reset}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          topic={topic}
-          setTopic={setTopic}
-          category={category}
-          setCategory={setCategory}
-          theme={theme}
-          setTheme={setTheme}
-          palette={palette}
-          setPalette={setPalette}
-          startSequence={startSequence}
-        />
-      )}
-
-      {view === 'loading' && <LoadingView loadingStep={loadingStep} />}
-      
-      {view === 'output' && (
-        <OutputView 
-          reset={reset}
-          setIsPresenting={setIsPresenting}
-          downloadPDF={downloadPDF}
-          downloadPPTX={downloadPPTX}
-          isExporting={isExporting}
-          conversionStatus={conversionStatus}
-          getPreviewHtml={getPreviewHtml}
-          isPresenting={isPresenting}
-          htmlCode={htmlCode}
-        />
-      )}
-
-      {view === 'error' && (
-        <ErrorView 
-          errorMessage={errorMessage} 
-          setView={setView} 
-          reset={reset} 
-        />
-      )}
+      {view === 'landing' && <LandingView />}
+      {view === 'input' && <InputView />}
+      {view === 'loading' && <LoadingView />}
+      {view === 'output' && <OutputView />}
+      {view === 'error' && <ErrorView errorMessage={errorMessage} setView={setView} reset={reset} />}
     </>
   );
 }
